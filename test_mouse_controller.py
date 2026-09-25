@@ -19,6 +19,13 @@ def test_largest_face_returns_none_for_empty_input():
     assert MODULE.largest_face([]) is None
 
 
+def test_named_cascade_assets_are_present_and_loadable():
+    assert MODULE.FACE_CASCADE_FILE.is_file()
+    assert MODULE.EYE_CASCADE_FILE.is_file()
+    assert not MODULE.cv2.CascadeClassifier(str(MODULE.FACE_CASCADE_FILE)).empty()
+    assert not MODULE.cv2.CascadeClassifier(str(MODULE.EYE_CASCADE_FILE)).empty()
+
+
 def test_normalized_offset_uses_face_center():
     assert MODULE.normalized_offset((25, 25, 50, 50), (100, 100)) == (0.0, 0.0)
     assert MODULE.normalized_offset((0, 0, 20, 20), (100, 100)) == (-0.4, -0.4)
