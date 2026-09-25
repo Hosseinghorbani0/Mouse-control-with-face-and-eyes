@@ -1,0 +1,4 @@
+opencv-python>=4.8,<5
+PyAutoGUI>=0.9.54,<1
+pytest>=8.0,<9
+ruff>=0.6,<1
