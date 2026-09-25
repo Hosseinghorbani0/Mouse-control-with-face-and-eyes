@@ -23,6 +23,10 @@ class Settings:
     camera: int = 0
     face_scale: float = 1.1
     face_neighbors: int = 6
+    eye_scale: float = 1.08
+    eye_neighbors: int = 6
+    tracking_alpha: float = 0.35
+    lost_frames: int = 8
     smoothing: float = 0.35
     deadzone: float = 0.08
     click_cooldown: float = 0.8
@@ -34,6 +38,10 @@ def parse_args() -> Settings:
     parser.add_argument("--camera", type=int, default=0, help="Camera device index")
     parser.add_argument("--face-scale", type=float, default=1.1)
     parser.add_argument("--face-neighbors", type=int, default=6)
+    parser.add_argument("--eye-scale", type=float, default=1.08)
+    parser.add_argument("--eye-neighbors", type=int, default=6)
+    parser.add_argument("--tracking-alpha", type=float, default=0.35)
+    parser.add_argument("--lost-frames", type=int, default=8)
     parser.add_argument("--smoothing", type=float, default=0.35)
     parser.add_argument("--deadzone", type=float, default=0.08)
     parser.add_argument("--click-cooldown", type=float, default=0.8)
@@ -41,10 +49,18 @@ def parse_args() -> Settings:
     args = parser.parse_args()
     if not 0 < args.smoothing <= 1 or not 0 <= args.deadzone < 0.5:
         parser.error("smoothing must be in (0, 1] and deadzone must be in [0, 0.5)")
+    if args.face_neighbors < 1 or args.eye_neighbors < 1 or args.lost_frames < 1:
+        parser.error("neighbor and lost-frame values must be positive")
+    if not 0 < args.tracking_alpha <= 1:
+        parser.error("tracking-alpha must be in (0, 1]")
     return Settings(
         camera=args.camera,
         face_scale=args.face_scale,
         face_neighbors=args.face_neighbors,
+        eye_scale=args.eye_scale,
+        eye_neighbors=args.eye_neighbors,
+        tracking_alpha=args.tracking_alpha,
+        lost_frames=args.lost_frames,
         smoothing=args.smoothing,
         deadzone=args.deadzone,
         click_cooldown=args.click_cooldown,
@@ -54,6 +70,12 @@ def parse_args() -> Settings:
 
 def largest_face(faces: Sequence[tuple[int, int, int, int]]) -> tuple[int, int, int, int] | None:
     return max(faces, key=lambda face: face[2] * face[3], default=None)
+
+
+def smooth_face(previous, current, alpha: float):
+    if previous is None:
+        return current
+    return tuple(round(old + (new - old) * alpha) for old, new in zip(previous, current))
 
 
 def normalized_offset(face: tuple[int, int, int, int], frame_size: tuple[int, int]) -> tuple[float, float]:
@@ -104,6 +126,10 @@ def run(settings: Settings) -> None:
     previous_x, previous_y = pyautogui.position()
     closed_count = 0
     last_click = 0.0
+    stable_face = None
+    lost_count = 0
+    eyes_were_open = False
+    blink_armed = True
 
     try:
         while True:
@@ -117,13 +143,25 @@ def run(settings: Settings) -> None:
                 gray, scaleFactor=settings.face_scale, minNeighbors=settings.face_neighbors,
                 minSize=(80, 80)
             )
-            face = largest_face(faces)
+            detected_face = largest_face(faces)
+            if detected_face is not None:
+                stable_face = smooth_face(stable_face, detected_face, settings.tracking_alpha)
+                lost_count = 0
+            else:
+                lost_count += 1
+                if lost_count > settings.lost_frames:
+                    stable_face = None
+            face = stable_face
             eyes = []
             now = time.monotonic()
-            if face is not None:
+            if face is not None and detected_face is not None:
                 x, y, width, height = face
                 face_gray = gray[y:y + height, x:x + width]
-                eyes = list(eye_model.detectMultiScale(face_gray, 1.1, 5, minSize=(18, 18)))
+                eye_region = face_gray[:round(height * 0.65), :]
+                eyes = list(eye_model.detectMultiScale(
+                    eye_region, settings.eye_scale, settings.eye_neighbors,
+                    minSize=(max(16, width // 8), max(12, height // 12))
+                ))
                 offset_x, offset_y = normalized_offset(face, (frame.shape[1], frame.shape[0]))
                 target_x = previous_x + movement(offset_x, settings.deadzone, screen_width)
                 target_y = previous_y + movement(offset_y, settings.deadzone, screen_height)
@@ -133,12 +171,20 @@ def run(settings: Settings) -> None:
                 cursor_y = round(previous_y + (target_y - previous_y) * settings.smoothing)
                 pyautogui.moveTo(cursor_x, cursor_y, duration=0)
                 previous_x, previous_y = cursor_x, cursor_y
-                closed_count = closed_count + 1 if not eyes else 0
-                if closed_count >= settings.closed_frames and now - last_click >= settings.click_cooldown:
+                if eyes:
+                    eyes_were_open = True
+                    blink_armed = True
+                    closed_count = 0
+                elif eyes_were_open:
+                    closed_count += 1
+                if (closed_count >= settings.closed_frames and blink_armed
+                        and now - last_click >= settings.click_cooldown):
                     pyautogui.click()
                     last_click = now
                     closed_count = 0
-            draw_status(frame, face, eyes, face is not None, now - last_click >= settings.click_cooldown)
+                    blink_armed = False
+            draw_status(frame, face, eyes, detected_face is not None,
+                        now - last_click >= settings.click_cooldown)
             cv2.imshow("Face Mouse", frame)
             key = cv2.waitKey(1) & 0xFF
             if key in (ord("q"), 27):
