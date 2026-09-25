@@ -29,6 +29,7 @@ class Settings:
     lost_frames: int = 8
     smoothing: float = 0.35
     deadzone: float = 0.08
+    sensitivity: float = 0.08
     click_cooldown: float = 0.8
     closed_frames: int = 3
 
@@ -44,6 +45,7 @@ def parse_args() -> Settings:
     parser.add_argument("--lost-frames", type=int, default=8)
     parser.add_argument("--smoothing", type=float, default=0.35)
     parser.add_argument("--deadzone", type=float, default=0.08)
+    parser.add_argument("--sensitivity", type=float, default=0.08)
     parser.add_argument("--click-cooldown", type=float, default=0.8)
     parser.add_argument("--closed-frames", type=int, default=3)
     args = parser.parse_args()
@@ -53,6 +55,8 @@ def parse_args() -> Settings:
         parser.error("neighbor and lost-frame values must be positive")
     if not 0 < args.tracking_alpha <= 1:
         parser.error("tracking-alpha must be in (0, 1]")
+    if not 0 < args.sensitivity <= 0.3:
+        parser.error("sensitivity must be in (0, 0.3]")
     return Settings(
         camera=args.camera,
         face_scale=args.face_scale,
@@ -63,6 +67,7 @@ def parse_args() -> Settings:
         lost_frames=args.lost_frames,
         smoothing=args.smoothing,
         deadzone=args.deadzone,
+        sensitivity=args.sensitivity,
         click_cooldown=args.click_cooldown,
         closed_frames=args.closed_frames,
     )
@@ -86,11 +91,12 @@ def normalized_offset(face: tuple[int, int, int, int], frame_size: tuple[int, in
     return center_x - 0.5, center_y - 0.5
 
 
-def movement(offset: float, deadzone: float, screen_size: int) -> int:
+def movement(offset: float, deadzone: float, screen_size: int, sensitivity: float = 0.08) -> int:
     if abs(offset) <= deadzone:
         return 0
     active_range = max(0.01, 0.5 - deadzone)
     return round((offset - math.copysign(deadzone, offset)) / active_range * screen_size * 0.12)
+    return round((offset - math.copysign(deadzone, offset)) / active_range * screen_size * sensitivity)
 
 
 def draw_status(frame, face, eyes, tracking, click_ready):
@@ -138,7 +144,7 @@ def run(settings: Settings) -> None:
                 print("Warning: camera frame could not be read")
                 continue
             frame = cv2.flip(frame, 1)
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray = cv2.equalizeHist(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
             faces = face_model.detectMultiScale(
                 gray, scaleFactor=settings.face_scale, minNeighbors=settings.face_neighbors,
                 minSize=(80, 80)
@@ -163,8 +169,8 @@ def run(settings: Settings) -> None:
                     minSize=(max(16, width // 8), max(12, height // 12))
                 ))
                 offset_x, offset_y = normalized_offset(face, (frame.shape[1], frame.shape[0]))
-                target_x = previous_x + movement(offset_x, settings.deadzone, screen_width)
-                target_y = previous_y + movement(offset_y, settings.deadzone, screen_height)
+                target_x = previous_x + movement(offset_x, settings.deadzone, screen_width, settings.sensitivity)
+                target_y = previous_y + movement(offset_y, settings.deadzone, screen_height, settings.sensitivity)
                 target_x = max(0, min(screen_width - 1, target_x))
                 target_y = max(0, min(screen_height - 1, target_y))
                 cursor_x = round(previous_x + (target_x - previous_x) * settings.smoothing)
