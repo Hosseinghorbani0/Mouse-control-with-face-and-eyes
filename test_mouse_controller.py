@@ -24,7 +24,16 @@ def test_normalized_offset_uses_face_center():
     assert MODULE.normalized_offset((0, 0, 20, 20), (100, 100)) == (-0.4, -0.4)
 
 
+def test_smooth_face_blends_previous_and_current_detection():
+    assert MODULE.smooth_face((10, 10, 50, 50), (20, 30, 70, 90), 0.5) == (15, 20, 60, 70)
+    assert MODULE.smooth_face(None, (20, 30, 70, 90), 0.5) == (20, 30, 70, 90)
+
+
 def test_movement_respects_deadzone():
     assert MODULE.movement(0.05, 0.1, 1000) == 0
     assert MODULE.movement(-0.25, 0.1, 1000) < 0
     assert MODULE.movement(0.25, 0.1, 1000) > 0
+
+
+def test_movement_respects_configured_sensitivity():
+    assert abs(MODULE.movement(0.5, 0.1, 1000, 0.05)) <= 50

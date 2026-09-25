@@ -95,7 +95,6 @@ def movement(offset: float, deadzone: float, screen_size: int, sensitivity: floa
     if abs(offset) <= deadzone:
         return 0
     active_range = max(0.01, 0.5 - deadzone)
-    return round((offset - math.copysign(deadzone, offset)) / active_range * screen_size * 0.12)
     return round((offset - math.copysign(deadzone, offset)) / active_range * screen_size * sensitivity)
 
 
