@@ -42,6 +42,8 @@ The defaults work best with the camera at eye level and a well-lit face:
 
 ```bash
 python Mouse-control-with-face-and-eyes.py --camera 0 --smoothing 0.25 --deadzone 0.1
+# Calibration mode: track movement without clicking
+python Mouse-control-with-face-and-eyes.py --no-click
 ```
 
 | Option | Default | Purpose |
@@ -58,6 +60,7 @@ python Mouse-control-with-face-and-eyes.py --camera 0 --smoothing 0.25 --deadzon
 | `--sensitivity` | `0.08` | Maximum cursor movement scale |
 | `--click-cooldown` | `0.8` | Minimum seconds between blink clicks |
 | `--closed-frames` | `3` | Frames without detected eyes to trigger a click |
+| `--no-click` | off | Disable blink clicking while calibrating |
 
 ## Troubleshooting
 
@@ -81,6 +84,7 @@ The Haar cascade files are loaded relative to the script, so the command can be 
 ## Safety and privacy
 
 Video frames are processed locally and are not recorded or uploaded. Mouse control is powerful: keep the preview visible and stop with `Q` or `Esc` if tracking behaves unexpectedly.
+PyAutoGUI fail-safe is enabled; moving the pointer to the top-left corner is an emergency stop for mouse actions.
 
 ## License
 

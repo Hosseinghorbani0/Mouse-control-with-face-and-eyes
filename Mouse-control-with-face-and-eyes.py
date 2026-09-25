@@ -32,6 +32,7 @@ class Settings:
     sensitivity: float = 0.08
     click_cooldown: float = 0.8
     closed_frames: int = 3
+    click_enabled: bool = True
 
 
 def parse_args() -> Settings:
@@ -48,6 +49,7 @@ def parse_args() -> Settings:
     parser.add_argument("--sensitivity", type=float, default=0.08)
     parser.add_argument("--click-cooldown", type=float, default=0.8)
     parser.add_argument("--closed-frames", type=int, default=3)
+    parser.add_argument("--no-click", action="store_true", help="Disable blink clicking")
     args = parser.parse_args()
     if not 0 < args.smoothing <= 1 or not 0 <= args.deadzone < 0.5:
         parser.error("smoothing must be in (0, 1] and deadzone must be in [0, 0.5)")
@@ -70,6 +72,7 @@ def parse_args() -> Settings:
         sensitivity=args.sensitivity,
         click_cooldown=args.click_cooldown,
         closed_frames=args.closed_frames,
+        click_enabled=not args.no_click,
     )
 
 
@@ -118,6 +121,8 @@ def draw_status(frame, face, eyes, tracking, click_ready):
 def run(settings: Settings) -> None:
     import pyautogui
 
+    pyautogui.FAILSAFE = True
+    pyautogui.PAUSE = 0.0
     face_model = cv2.CascadeClassifier(str(FACE_CASCADE_FILE))
     eye_model = cv2.CascadeClassifier(str(EYE_CASCADE_FILE))
     if face_model.empty() or eye_model.empty():
@@ -182,14 +187,14 @@ def run(settings: Settings) -> None:
                     closed_count = 0
                 elif eyes_were_open:
                     closed_count += 1
-                if (closed_count >= settings.closed_frames and blink_armed
+                if (settings.click_enabled and closed_count >= settings.closed_frames and blink_armed
                         and now - last_click >= settings.click_cooldown):
                     pyautogui.click()
                     last_click = now
                     closed_count = 0
                     blink_armed = False
             draw_status(frame, face, eyes, detected_face is not None,
-                        now - last_click >= settings.click_cooldown)
+                        settings.click_enabled and now - last_click >= settings.click_cooldown)
             cv2.imshow("Face Mouse", frame)
             key = cv2.waitKey(1) & 0xFF
             if key in (ord("q"), 27):
