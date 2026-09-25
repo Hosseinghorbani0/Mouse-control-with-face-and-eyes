@@ -49,8 +49,13 @@ python Mouse-control-with-face-and-eyes.py --camera 0 --smoothing 0.25 --deadzon
 | `--camera` | `0` | Webcam device index |
 | `--face-scale` | `1.1` | Detection pyramid step |
 | `--face-neighbors` | `6` | Detection strictness |
+| `--eye-scale` | `1.08` | Eye detection pyramid step |
+| `--eye-neighbors` | `6` | Eye detection strictness |
+| `--tracking-alpha` | `0.35` | Temporal face-box stabilization |
+| `--lost-frames` | `8` | Frames tolerated during short tracking loss |
 | `--smoothing` | `0.35` | Cursor responsiveness from 0 to 1 |
 | `--deadzone` | `0.08` | Center area where the cursor does not move |
+| `--sensitivity` | `0.08` | Maximum cursor movement scale |
 | `--click-cooldown` | `0.8` | Minimum seconds between blink clicks |
 | `--closed-frames` | `3` | Frames without detected eyes to trigger a click |
 
@@ -60,6 +65,8 @@ python Mouse-control-with-face-and-eyes.py --camera 0 --smoothing 0.25 --deadzon
 - **Cursor feels too sensitive:** increase `--deadzone` or decrease `--smoothing`.
 - **False clicks:** increase `--closed-frames` and `--click-cooldown`; improve lighting.
 - **No face detected:** move closer, face the camera, and avoid strong backlighting.
+
+The bundled models are named `face_cascade.xml` and `eye_cascade.xml` and are loaded relative to the Python script.
 
 ## Development
 
