@@ -6,12 +6,11 @@ from __future__ import annotations
 import argparse
 import math
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 import cv2
-import pyautogui
 
 
 ROOT = Path(__file__).resolve().parent
@@ -88,6 +87,8 @@ def draw_status(frame, face, eyes, tracking, click_ready):
 
 
 def run(settings: Settings) -> None:
+    import pyautogui
+
     face_model = cv2.CascadeClassifier(str(ROOT / "f1.xml"))
     eye_model = cv2.CascadeClassifier(str(ROOT / "eyye.xml"))
     if face_model.empty() or eye_model.empty():
@@ -159,7 +160,7 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 
-    
+
 
 
 
