@@ -14,6 +14,8 @@ import cv2
 
 
 ROOT = Path(__file__).resolve().parent
+FACE_CASCADE_FILE = ROOT / "face_cascade.xml"
+EYE_CASCADE_FILE = ROOT / "eye_cascade.xml"
 
 
 @dataclass(frozen=True)
@@ -89,10 +91,10 @@ def draw_status(frame, face, eyes, tracking, click_ready):
 def run(settings: Settings) -> None:
     import pyautogui
 
-    face_model = cv2.CascadeClassifier(str(ROOT / "f1.xml"))
-    eye_model = cv2.CascadeClassifier(str(ROOT / "eyye.xml"))
+    face_model = cv2.CascadeClassifier(str(FACE_CASCADE_FILE))
+    eye_model = cv2.CascadeClassifier(str(EYE_CASCADE_FILE))
     if face_model.empty() or eye_model.empty():
-        raise RuntimeError("Could not load f1.xml or eyye.xml")
+        raise RuntimeError("Could not load face_cascade.xml or eye_cascade.xml")
 
     camera = cv2.VideoCapture(settings.camera)
     if not camera.isOpened():
