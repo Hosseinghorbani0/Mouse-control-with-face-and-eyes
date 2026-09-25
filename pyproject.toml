@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+testpaths = ["test_mouse_controller.py"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "UP"]
+ignore = ["E501"]
